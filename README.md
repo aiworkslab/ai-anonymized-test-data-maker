@@ -1,2 +1,20 @@
-# ai-anonymized-test-data-maker
-Excel/CSV data anonymization and test data generator / Excel・CSV匿名化とテストデータ作成ツール
+# AI Anonymized Test Data Maker
+# AI匿名テストデータメーカー
+
+## Purpose / 目的
+
+ExcelやCSVに含まれる実データを、AIへ相談しやすい汎用データへ置き換えるためのGUIツールです。
+
+## Main Features / 主な機能
+
+- 会社名、担当者名、商品名を汎用名へ置換
+- 住所、電話番号、メールアドレスをダミーデータへ置換
+- 得意先コード、部門コード、担当者コードを対応関係を保ったまま置換
+- 請求書No.、伝票No.、行No.などの親子関係を保ったテストデータ作成
+- Excel / CSV の読み込みと出力
+- 最初はPC内だけで処理するローカルGUI版
+
+## First Goal / 最初の目標
+
+ExcelまたはCSVを読み込み、指定した列を匿名化して、
+別ファイルとして出力できる最初のGUI版を作る。
