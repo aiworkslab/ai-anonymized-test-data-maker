@@ -1,5 +1,4 @@
-# AI Anonymized Test Data Maker
-# AI匿名テストデータメーカー
+# AI Anonymized Test Data Maker / AI匿名テストデータメーカー
 
 ## Purpose / 目的
 
@@ -18,3 +17,21 @@ ExcelやCSVに含まれる実データを、AIへ相談しやすい汎用デー�
 
 ExcelまたはCSVを読み込み、指定した列を匿名化して、
 別ファイルとして出力できる最初のGUI版を作る。
+
+## Version 0.1 Target Columns / Ver0.1で対応する列
+
+最初のGUI版では、次の列を選んで匿名化できるようにする。
+
+- 会社名
+- 担当者名
+- 商品名
+- 住所
+- 電話番号
+- メールアドレス
+
+同じ元データは、同じ匿名データへ置き換える。
+
+例：
+- 株式会社サンプル → 株式会社A
+- 田中太郎 → 担当者001
+- sample@example.com → user001@example.test
