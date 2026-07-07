@@ -7,6 +7,15 @@ import pandas as pd
 
 APP_TITLE = "AI Anonymized Test Data Maker"
 SUPPORTED_EXTENSIONS = {".csv", ".xlsx"}
+UNSELECTED_LABEL = "未選択"
+COLUMN_SELECTION_LABELS = [
+    ("company_name", "会社名として匿名化する列"),
+    ("person_name", "担当者名として匿名化する列"),
+    ("product_name", "商品名として匿名化する列"),
+    ("address", "住所として匿名化する列"),
+    ("phone_number", "電話番号として匿名化する列"),
+    ("email_address", "メールアドレスとして匿名化する列"),
+]
 
 
 def validate_input_file(file_path):
@@ -36,8 +45,8 @@ def read_csv_columns(file_path):
 
 
 def get_excel_sheets(file_path):
-    excel_file = pd.ExcelFile(file_path, engine="openpyxl")
-    return excel_file.sheet_names
+    with pd.ExcelFile(file_path, engine="openpyxl") as excel_file:
+        return excel_file.sheet_names
 
 
 def read_excel_columns(file_path, sheet_name):
@@ -54,8 +63,8 @@ class AnonymizedTestDataMakerApp:
     def __init__(self, root):
         self.root = root
         self.root.title(APP_TITLE)
-        self.root.geometry("720x520")
-        self.root.minsize(560, 420)
+        self.root.geometry("720x680")
+        self.root.minsize(560, 560)
 
         self.selected_file_path = None
         self.sheet_names = []
@@ -63,6 +72,11 @@ class AnonymizedTestDataMakerApp:
         self.file_name_var = tk.StringVar(value="未選択")
         self.sheet_var = tk.StringVar()
         self.status_var = tk.StringVar(value="ファイルを選択してください。")
+        self.anonymize_column_vars = {
+            key: tk.StringVar(value=UNSELECTED_LABEL)
+            for key, _label in COLUMN_SELECTION_LABELS
+        }
+        self.anonymize_column_combos = {}
 
         self._build_widgets()
 
@@ -90,7 +104,7 @@ class AnonymizedTestDataMakerApp:
         file_frame.grid(row=2, column=0, sticky=tk.EW, pady=(0, 10))
         file_frame.columnconfigure(1, weight=1)
 
-        ttk.Label(file_frame, text="選択したファイル名:").grid(
+        ttk.Label(file_frame, text="選択したファイル名").grid(
             row=0,
             column=0,
             sticky=tk.W,
@@ -106,7 +120,7 @@ class AnonymizedTestDataMakerApp:
         sheet_frame.grid(row=3, column=0, sticky=tk.EW, pady=(0, 12))
         sheet_frame.columnconfigure(1, weight=1)
 
-        ttk.Label(sheet_frame, text="Excelシート選択:").grid(
+        ttk.Label(sheet_frame, text="Excelシート選択").grid(
             row=0,
             column=0,
             sticky=tk.W,
@@ -137,8 +151,33 @@ class AnonymizedTestDataMakerApp:
         scrollbar.grid(row=0, column=1, sticky=tk.NS)
         self.columns_listbox.configure(yscrollcommand=scrollbar.set)
 
+        selection_frame = ttk.LabelFrame(
+            main_frame,
+            text="匿名化する列の選択",
+            padding=10,
+        )
+        selection_frame.grid(row=5, column=0, sticky=tk.EW, pady=(0, 12))
+        selection_frame.columnconfigure(1, weight=1)
+
+        for row_index, (key, label) in enumerate(COLUMN_SELECTION_LABELS):
+            ttk.Label(selection_frame, text=label).grid(
+                row=row_index,
+                column=0,
+                sticky=tk.W,
+                padx=(0, 8),
+                pady=2,
+            )
+            combo = ttk.Combobox(
+                selection_frame,
+                textvariable=self.anonymize_column_vars[key],
+                state="readonly",
+                values=[UNSELECTED_LABEL],
+            )
+            combo.grid(row=row_index, column=1, sticky=tk.EW, pady=2)
+            self.anonymize_column_combos[key] = combo
+
         status_frame = ttk.LabelFrame(main_frame, text="状態メッセージ", padding=10)
-        status_frame.grid(row=5, column=0, sticky=tk.EW)
+        status_frame.grid(row=6, column=0, sticky=tk.EW)
         status_frame.columnconfigure(0, weight=1)
 
         ttk.Label(status_frame, textvariable=self.status_var).grid(
@@ -164,6 +203,7 @@ class AnonymizedTestDataMakerApp:
             self.selected_file_path = path
             self.file_name_var.set(path.name)
             self.clear_columns()
+            self.update_anonymize_column_options([])
 
             if path.suffix.lower() == ".csv":
                 self.disable_sheet_selection()
@@ -181,7 +221,9 @@ class AnonymizedTestDataMakerApp:
             self.sheet_combo.configure(state="readonly", values=self.sheet_names)
             self.sheet_var.set(self.sheet_names[0])
             self.load_excel_sheet_columns(self.sheet_names[0])
-            self.status_var.set("Excelファイルを読み込みました。シートを選択できます。")
+            self.status_var.set(
+                "Excelファイルを読み込みました。シートを選択できます。"
+            )
 
         except Exception as error:
             self.reset_selection_after_error()
@@ -197,6 +239,7 @@ class AnonymizedTestDataMakerApp:
             self.status_var.set(f"シート「{sheet_name}」の列名を表示しました。")
         except Exception as error:
             self.clear_columns()
+            self.update_anonymize_column_options([])
             self.show_error(error)
 
     def load_excel_sheet_columns(self, sheet_name):
@@ -205,16 +248,25 @@ class AnonymizedTestDataMakerApp:
 
     def show_columns(self, columns):
         self.clear_columns()
-        for column in columns:
-            self.columns_listbox.insert(tk.END, str(column))
+        display_columns = [str(column) for column in columns]
+        for column in display_columns:
+            self.columns_listbox.insert(tk.END, column)
 
-        if columns:
-            self.status_var.set(f"{len(columns)}件の列名を表示しました。")
+        self.update_anonymize_column_options(display_columns)
+
+        if display_columns:
+            self.status_var.set(f"{len(display_columns)}件の列名を表示しました。")
         else:
             self.status_var.set("列名が見つかりませんでした。")
 
     def clear_columns(self):
         self.columns_listbox.delete(0, tk.END)
+
+    def update_anonymize_column_options(self, columns):
+        values = [UNSELECTED_LABEL, *columns]
+        for key, combo in self.anonymize_column_combos.items():
+            combo.configure(values=values)
+            self.anonymize_column_vars[key].set(UNSELECTED_LABEL)
 
     def disable_sheet_selection(self):
         self.sheet_names = []
@@ -226,6 +278,7 @@ class AnonymizedTestDataMakerApp:
         self.file_name_var.set("未選択")
         self.disable_sheet_selection()
         self.clear_columns()
+        self.update_anonymize_column_options([])
 
     def show_error(self, error):
         message = f"読み込みに失敗しました: {error}"
